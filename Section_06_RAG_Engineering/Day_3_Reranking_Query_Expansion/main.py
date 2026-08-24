@@ -60,14 +60,17 @@ def expand_query(question: str) -> str:
         messages=[{
             "role": "user",
             "content": (
-                "Rewrite the user's question as a short, keyword-rich search query. "
-                "Add synonyms and likely terms that would appear in a documentation page. "
-                "Return only the rewritten query.\n\n"
+                "You are rewriting a user question for a company documentation search. "
+                "Use likely product-domain terms, not generic filler words. "
+                "Include synonyms and exact security/privacy terms that appear in docs, "
+                "such as: encryption, AES-256, TLS, data protection, privacy, secure, safety, "
+                "authentication, compliance, access control. "
+                "Return only a short keyword query with 6-12 terms, no sentence, no explanation.\n\n"
                 f"User question: {question}\n\nRewritten query:"
             ),
         }],
-        temperature=0.0,
-        max_tokens=60,
+        temperature=0.2,
+        max_tokens=80,
     )
     return resp.choices[0].message.content.strip()
 

@@ -10,27 +10,23 @@ Start:
 Open http://localhost:8000/docs
 
 Endpoints:
-    POST /login    { "username": "...", "password": "..." }  -> { "token": "..." }
-    POST /ingest   { "source": "path or URL" }               (JWT required)
-    POST /ask      { "question": "...", "top_k": 5 }         (JWT required, streams)
-    GET  /usage                                              (JWT required)
+    POST /ingest   { "source": "path or URL" }
+    POST /ask      { "question": "...", "top_k": 5 }         (streams)
+    GET  /usage
 
-/login is a STUB - replace with the real user table when you deploy.
+This build is open - there is no authentication. Every request shares one
+identity, so don't expose it outside a trusted network.
 """
 
-import os
 import re
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import tiktoken
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from pydantic import BaseModel
 
 # --- LangChain imports ---
@@ -57,8 +53,9 @@ load_dotenv()
 # ------------------------------------------------------------
 # Setup — one-time at startup
 # ------------------------------------------------------------
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
-JWT_ALG = "HS256"
+# No auth: every request is attributed to this single identity, which is what
+# document metadata and the usage table are keyed on.
+DEFAULT_USER = "local"
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 reranker_model = HuggingFaceCrossEncoder(model_name="BAAI/bge-reranker-base")
@@ -81,7 +78,6 @@ conn.execute(
 conn.commit()
 
 app = FastAPI(title="Enterprise RAG Chatbot — LangChain edition")
-oauth2 = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 
 # ------------------------------------------------------------
@@ -121,28 +117,6 @@ INJECTION_PATTERNS = [
 def looks_like_injection(text: str) -> bool:
     t = text.lower()
     return any(re.search(p, t) for p in INJECTION_PATTERNS)
-
-
-# ------------------------------------------------------------
-# Auth — Section 2 pattern, simplified STUB
-# ------------------------------------------------------------
-class LoginBody(BaseModel):
-    username: str
-    password: str
-
-
-def make_token(username: str) -> str:
-    payload = {"sub": username, "exp": datetime.utcnow() + timedelta(hours=8)}
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
-
-
-def current_user(token: Optional[str] = Depends(oauth2)) -> str:
-    if not token:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing token")
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])["sub"]
-    except JWTError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
 
 
 # ------------------------------------------------------------
@@ -188,19 +162,13 @@ def build_rag_chain(user: str):
 # ------------------------------------------------------------
 # Endpoints
 # ------------------------------------------------------------
-@app.post("/login")
-def login(body: LoginBody):
-    if not body.username or not body.password:
-        raise HTTPException(400, "username & password required")
-    return {"token": make_token(body.username)}
-
-
 class IngestBody(BaseModel):
     source: str
 
 
 @app.post("/ingest")
-def ingest(body: IngestBody, user: str = Depends(current_user)):
+def ingest(body: IngestBody):
+    user = DEFAULT_USER
     docs = load(body.source)
     if not docs:
         return {"chunks_added": 0}
@@ -243,7 +211,8 @@ def stream_answer(user: str, question: str):
 
 
 @app.post("/ask")
-def ask(body: AskBody, user: str = Depends(current_user)):
+def ask(body: AskBody):
+    user = DEFAULT_USER
     if looks_like_injection(body.question):
         return {"answer": "I can\'t help with that."}
 
@@ -265,7 +234,8 @@ def ask(body: AskBody, user: str = Depends(current_user)):
 
 
 @app.get("/usage")
-def usage(user: str = Depends(current_user)):
+def usage():
+    user = DEFAULT_USER
     row = conn.execute(
         "SELECT COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0) "
         "FROM usage WHERE user = ?",

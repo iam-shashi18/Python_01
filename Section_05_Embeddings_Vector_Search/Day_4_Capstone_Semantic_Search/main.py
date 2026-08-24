@@ -12,6 +12,10 @@ Endpoints:
     POST /ingest    body: {"pdf_path": "..."}
     GET  /search    query: q, top_k, source (optional filter)
     GET  /stats
+    
+    {
+  "pdf_path": "/Users/udaykakani/Projects/Courses/Python_01/Section_05_Embeddings_Vector_Search/Day_4_Capstone_Semantic_Search/your_file.pdf"
+}
 """
 
 from pathlib import Path
