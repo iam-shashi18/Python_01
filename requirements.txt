@@ -47,3 +47,16 @@ sentence-transformers>=3.0.0
 faiss-cpu>=1.8.0
 rank-bm25>=0.2.2
 pypdf>=4.0.0
+python-docx 
+trafilatura
+
+langchain>=0.3 
+langchain-core>=0.3 
+langchain-community>=0.3 
+langchain-chroma>=0.2 
+langchain-together>=0.2 
+langchain-huggingface>=0.2 
+langchain-text-splitters>=0.3 
+
+beautifulsoup4 
+tavily-python

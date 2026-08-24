@@ -1,5 +1,19 @@
 Working With Databases/example.db
 
+# OS / editor / cache junk
+.DS_Store
+**/.DS_Store
+**/__pycache__/
+**/.vscode/
+*.pyc
+
+# Local vector stores and databases
+**/chroma_data/
+**/search_db/
+**/langchain_rag_db/
+**/langchain_usage.db
+**/assistant.db
+
 # Environment files - never commit API keys
 .env
 **/.env
