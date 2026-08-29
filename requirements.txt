@@ -60,3 +60,7 @@ langchain-text-splitters>=0.3
 
 beautifulsoup4 
 tavily-python
+trl 
+datasets 
+wandb
+peft
