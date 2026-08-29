@@ -64,3 +64,4 @@ trl
 datasets 
 wandb
 peft
+langfuse
